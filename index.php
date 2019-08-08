@@ -1,21 +1,22 @@
 <?php 
 
-require_once("vendor/autoload.php");
+require_once("vendor/autoload.php"); //composer
 
-$app = new \Slim\Slim();
+use \Slim\Slim;    //namespaces dentro do vendor
+use \Hcode\Page;  //namespaces dentro do vendor
+
+$app = new Slim();   // Slim Framework
 
 $app->config('debug', true);
 
-$app->get('/', function() {
+$app->get('/', function() {   //Rota
     
-	$sql = new Hcode\DB\Sql();
-
-	$results = $sql->select("SELECT * FROM tb_users");
-
-	echo json_encode($results);
+	$page = new Page();
+	
+	$page->setTpl("index");
 
 });
 
-$app->run();
+$app->run(); //executa de fato
 
  ?>
