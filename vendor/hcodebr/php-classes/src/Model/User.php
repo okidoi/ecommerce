@@ -36,26 +36,27 @@ class User extends Model{
 	{
 
 		if (
-			!isset($_SESSION[User::SESSION])
+			!isset($_SESSION[User::SESSION])   //se a sessão do usuário não está definida (se não está definida logo não está logado)
 			||
-			!$_SESSION[User::SESSION]
+			!$_SESSION[User::SESSION]  // se está definida mas é vazia
 			||
-			!(int)$_SESSION[User::SESSION]["iduser"] > 0
+			!(int)$_SESSION[User::SESSION]["iduser"] > 0  //se o id dele não é maior que zero (logo usuário não está logado)
 		) {
 			//Não está logado
 			return false;
 
 		} else {
 
+			//se estou na rota da administracao e o usuário é administrativo
 			if ($inadmin === true && (bool)$_SESSION[User::SESSION]['inadmin'] === true) {
 
 				return true;
 
-			} else if ($inadmin === false) {
+			} else if ($inadmin === false) { //ele está logado mas não necessáriamente precisa ser um administrador (ex: quer acessar seu carrinho)
 
 				return true;
 
-			} else {
+			} else {  //caso contrário ele não está logado
 
 				return false;
 
@@ -101,16 +102,9 @@ class User extends Model{
 
 
 	public static function verifyLogin($inadmin = true){
-		if(
-			!isset($_SESSION[User::SESSION])
-			||
-			!$_SESSION[User::SESSION]
-			||
-			!(int)$_SESSION[User::SESSION]["iduser"] > 0
-			|| 
-			(bool)$_SESSION[User::SESSION]["inadmin"] !== $inadmin
-		){
+		if(User::checkLogin($inadmin)){
 			header("Location: /admin/login");
+			exit;
 		}
 	}
 
