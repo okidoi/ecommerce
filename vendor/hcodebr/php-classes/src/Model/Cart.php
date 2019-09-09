@@ -13,6 +13,7 @@ class Cart extends Model{
 
 
 	const SESSION = "Cart";
+	const SESSION_ERROR = "CartError";
 	
 
 	public static function getFromSession(){
@@ -121,6 +122,8 @@ class Cart extends Model{
 
 		]);
 
+		$this->getCalculateTotal();
+
 
 
 	}
@@ -142,6 +145,8 @@ class Cart extends Model{
 			]);
 
 		}
+
+		$this->getCalculateTotal();
 	}
 
 	public function getProducts()
@@ -171,6 +176,148 @@ class Cart extends Model{
 		]);
 
 		return Product::checklist($rows);
+	}
+
+
+	public function getProductsTotals()
+	{
+		$sql = new Sql();
+		$results = $sql->select("
+				SELECT SUM(vlprice) AS vlprice, SUM(vlwidth) AS vlwidth, SUM(vlheight) AS vlheight, SUM(vllength) AS vllength, SUM(vlweight) AS vlweight, COUNT(*) AS nrqtd
+				FROM tb_products a
+				INNER JOIN tb_cartsproducts b ON a.idproduct = b.idproduct
+				WHERE b.idcart = :idcart AND dtremoved IS NULL;
+		",[
+			':idcart'=>$this->getidcart()
+		]);
+
+		if(count($results) > 0){
+			return $results[0];
+		}else{
+			return[];
+		}
+
+	}
+
+
+	public function setFreight($nrzipcode)
+	{
+
+		
+		$nrzipcode = str_replace('-', '', $nrzipcode);
+
+		$totals = $this->getProductsTotals();
+
+		if($totals['nrqtd'] > 0){
+
+			if($totals['vlheight'] < 2) $totals['vlheight'] = 2;
+			if($totals['vllength'] < 16) $totals['vllength'] = 16;
+			
+			if($totals['vlprice'] < 19)    $totals['vlprice'] = 20;
+			if($totals['vlprice'] > 10000) $totals['vlprice'] = 9999;
+
+
+			$qs = http_build_query([
+					'nCdEmpresa'=> '',
+					'sDsSenha'=> '',
+					'nCdServico'=> '40010',
+					'sCepOrigem'=> '09853120',
+					'sCepDestino'=> $nrzipcode,
+					'nVlPeso'=> $totals['vlweight'],
+					'nCdFormato'=> '1',
+					'nVlComprimento'=>$totals['vllength'],
+					'nVlAltura'=> $totals['vlheight'],
+					'nVlLargura'=> $totals['vlwidth'],
+					'nVlDiametro'=> '0',
+					'sCdMaoPropria'=> 'S',
+					'nVlValorDeclarado'=> $totals['vlprice'],
+					'sCdAvisoRecebimento'=> 'S'
+
+			]);
+
+			$xml = simplexml_load_file("http://ws.correios.com.br/calculador/CalcPrecoPrazo.asmx/CalcPrecoPrazo?".$qs);
+
+			//var_dump($xml->Servicos->cServico);
+			//die();
+			$result = $xml->Servicos->cServico;
+			//var_dump($result);
+			//die();
+
+			//se der erro no webserice dos correios
+			if($result->MsgErro != ''){
+				Cart::setMsgError($result->MsgErro);
+			}else{
+				Cart::clearMsgError();
+			}
+
+			$this->setnrdays($result->PrazoEntrega);
+			$this->setvlfreight(Cart::formatValueToDecimal($result->Valor));
+			$this->setdeszipcode($nrzipcode);
+			$this->save();
+
+			return $result;
+
+			//echo json_encode($xml);
+			//exit;
+
+
+		}else{
+
+		}
+	}
+
+	public static function formatValueToDecimal($value):float
+	{
+		$value = str_replace('.', '',$value);
+		return str_replace(',', '.', $value);
+	}
+
+	public static function setMsgError($msg){
+
+		$_SESSION[Cart::SESSION_ERROR] = $msg;
+
+	}
+
+	public static function getMsgError()
+	{
+		$msg = (isset($_SESSION[Cart::SESSION_ERROR] ) ? $_SESSION[Cart::SESSION_ERROR]  : "");
+		
+		Cart::clearMsgError();
+
+		return $msg;
+	}
+
+	public static function clearMsgError()
+	{
+		$_SESSION[Cart::SESSION_ERROR] = NULL;
+	}
+
+	//Atualizar o valor do Frete
+	public function updateFreight()
+	{
+		if($this->getdeszipcode() != ''){
+
+			$this->setFreight($this->getdeszipcode());
+		}
+	}
+
+
+	public function getValues()
+	{
+		
+		$this->getCalculateTotal();
+
+		return parent::getValues();
+	}
+
+	public function getCalculateTotal(){
+
+		$this->updateFreight();//atualiza o valor do frete primeiro
+
+		$totals = $this->getProductsTotals();
+		$this->setvlsubtotal($totals['vlprice']);
+		$this->setvltotal($totals['vlprice'] + $this->getvlfreight());
+
 	}
 
 
