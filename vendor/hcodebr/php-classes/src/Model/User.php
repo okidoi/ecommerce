@@ -50,7 +50,7 @@ class User extends Model{
 			//se estou na rota da administracao e o usuário é administrativo
 			if ($inadmin === true && (bool)$_SESSION[User::SESSION]['inadmin'] === true) {
 
-				return true;
+				return true; //Ok. Está logado
 
 			} else if ($inadmin === false) { //ele está logado mas não necessáriamente precisa ser um administrador (ex: quer acessar seu carrinho)
 
@@ -87,6 +87,8 @@ class User extends Model{
 
 			$user = new User();
 
+			$data['desperson'] = utf8_encode($data['desperson']); //NOVO MARCIO
+
 			$user->setData($data);
 
 			$_SESSION[User::SESSION] = $user->getValues();
@@ -102,8 +104,14 @@ class User extends Model{
 
 
 	public static function verifyLogin($inadmin = true){
-		if(User::checkLogin($inadmin)){
-			header("Location: /admin/login");
+
+		if(!User::checkLogin($inadmin)){
+		
+			if($inadmin){
+				header("Location: /admin/login");
+			}else{
+				header("Location: /login");
+			}
 			exit;
 		}
 	}
@@ -127,9 +135,9 @@ class User extends Model{
 		$sql = new Sql();
 
 		$results = $sql->select("CALL sp_users_save(:desperson, :deslogin, :despassword, :desemail, :nrphone, :inadmin)", array(
-				":desperson"=>$this->getdesperson(),
+				":desperson"=>utf8_decode($this->getdesperson()),
 				":deslogin"=>$this->getdeslogin(),
-				":despassword"=>$this->getdespassword(),
+				":despassword"=>User::getPasswordHash($this->getdespassword()),
 				":desemail"=>$this->getdesemail(),
 				":nrphone"=>$this->getnrphone(),
 				":inadmin"=>$this->getinadmin()
@@ -144,8 +152,11 @@ class User extends Model{
 		$results = $sql->select("SELECT * FROM tb_users a INNER JOIN tb_persons b USING (idperson) WHERE a.iduser = :iduser", array(
 			":iduser"=>$iduser
 		));
+		$data = results[0];
 
-		$this->setData($results[0]);
+		$data['desperson'] = utf8_encode($data['desperson']); //NOVO MARCIO
+
+		$this->setData($data);
 	}
 
 
@@ -155,9 +166,9 @@ class User extends Model{
 
 		$results = $sql->select("CALL sp_usersupdate_save(:iduser, :desperson, :deslogin, :despassword, :desemail, :nrphone, :inadmin)", array(
 				":iduser"=>$this->getiduser(),
-				":desperson"=>$this->getdesperson(),
+				":desperson"=>utf8_decode($this->getdesperson()),
 				":deslogin"=>$this->getdeslogin(),
-				":despassword"=>$this->getdespassword(),
+				":despassword"=>User::getPasswordHash($this->getdespassword()),
 				":desemail"=>$this->getdesemail(),
 				":nrphone"=>$this->getnrphone(),
 				":inadmin"=>$this->getinadmin()
