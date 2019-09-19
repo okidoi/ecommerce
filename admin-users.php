@@ -14,7 +14,7 @@ $app->get("/admin/users", function(){
 	$search = (isset($_GET['search'])) ? $_GET['search'] : "" ;
 	$page = (isset($_GET['page']))? (int)$_GET['page'] : 1;  // Se veio como parametro a pagina então a utiliza. Caso contrario é a primeira página.
 
-	$qtdRegistrosPorPagina = 3;
+	$qtdRegistrosPorPagina = 2;
 
 	if($search != ''){
 
