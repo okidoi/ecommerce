@@ -97,10 +97,43 @@ $app->get("/admin/orders", function(){
 
 	User::verifyLogin();
 
+	$search = (isset($_GET['search'])) ? $_GET['search'] : "" ;
+	$page = (isset($_GET['page']))? (int)$_GET['page'] : 1;  // Se veio como parametro a pagina então a utiliza. Caso contrario é a primeira página.
+
+	$qtdRegistrosPorPagina = 2;
+
+	if($search != ''){
+
+		$pagination = Order::getPageSearch($search, $page, $qtdRegistrosPorPagina);
+	
+	}else{
+		
+		$pagination = Order::getPage($page, $qtdRegistrosPorPagina);
+
+	}
+
+
+	$pages = [];
+
+	for($x = 0; $x < $pagination['pages']; $x++)
+	{
+		array_push($pages, [
+			'href'=>'/admin/orders?'. http_build_query([
+
+				'page'=>$x+1,
+				'search'=>$search
+			]),
+			'text'=>$x+1
+
+		]);
+	}
+
 	$page = new PageAdmin();
 
 	$page->setTpl("orders", [
-		"orders"=>Order::listAll()
+		"orders"=>$pagination['data'],
+		"search"=>$search,
+		"pages"=>$pages
 	]); 
 
 });
