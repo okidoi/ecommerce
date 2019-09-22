@@ -152,7 +152,7 @@ class User extends Model{
 		$results = $sql->select("SELECT * FROM tb_users a INNER JOIN tb_persons b USING (idperson) WHERE a.iduser = :iduser", array(
 			":iduser"=>$iduser
 		));
-		$data = results[0];
+		$data = $results[0];
 
 		$data['desperson'] = utf8_encode($data['desperson']); //NOVO MARCIO
 
